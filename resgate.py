@@ -3,8 +3,10 @@ from heapq import heappush, heappop
 from itertools import count
 from time import perf_counter
 
-# O mapa usa os seguintes simbolos: B = base, V = vitima, A = asfalto, L = lama,
-# R = agua rasa, X = area bloqueada e * = caminho que foi escolhido pela busca.
+# O mapa usa os seguintes simbolos:
+# B = base, v = vitima, A = asfalto, L = lama, R = agua rasa,
+# X = area bloqueada e * = caminho que foi escolhido pela busca.
+# Ao imprimir, a letra v e convertida para V para ficar mais legivel.
 
 # ============================================================
 # 1. CONFIGURACAO DO PROBLEMA
@@ -14,6 +16,7 @@ CUSTOS = {
     "A": 1,             # Asfalto e o terreno mais barato para o drone.
     "L": 4,             # Lama aumenta o custo do deslocamento.
     "R": 7,             # Agua rasa e ainda mais cara.
+    "v": 1,             # Celula da vitima e tratada como custo equivalente ao asfalto.
     "X": float("inf")   # Area intransponivel, o drone nao pode entrar.
 }
 
@@ -34,9 +37,9 @@ INSTANCIAS = {
         "mapa": [
             ["A", "A", "A", "A", "A"],
             ["A", "X", "L", "X", "A"],
-            ["A", "A", "A", "A", "A"],
+            ["A", "A", "A", "R", "A"],
             ["X", "X", "A", "X", "X"],
-            ["A", "A", "A", "A", "A"]
+            ["A", "A", "A", "A", "v"]
         ],
         "inicio": (0, 0),
         "objetivo": (4, 4)
@@ -46,7 +49,7 @@ INSTANCIAS = {
         "mapa": [
             ["X", "X", "X", "X", "X", "X", "X", "X", "X"],
             ["A", "A", "A", "A", "A", "A", "A", "A", "A"],
-            ["A", "L", "L", "L", "L", "L", "L", "L", "A"],
+            ["A", "R", "R", "R", "R", "R", "R", "R", "v"],
             ["X", "X", "X", "X", "X", "X", "X", "X", "X"]
         ],
         "inicio": (2, 0),
@@ -55,8 +58,8 @@ INSTANCIAS = {
 
     "Instancia 3 - Sem solucao": {
         "mapa": [
-            ["A", "A", "X", "A", "A"],
-            ["A", "A", "X", "A", "A"],
+            ["A", "A", "X", "A", "v"],
+            ["A", "R", "X", "A", "A"],
             ["A", "A", "X", "A", "A"],
             ["A", "A", "X", "A", "A"],
             ["A", "A", "X", "A", "A"]
@@ -70,6 +73,14 @@ INSTANCIAS = {
 # ============================================================
 # 3. FUNCOES AUXILIARES
 # ============================================================
+
+# Marca a vitima no mapa com o simbolo 'v' para manter a informacao do problema no proprio mapa.
+def marcar_vitima_no_mapa(mapa, objetivo):
+    mapa_copia = [linha[:] for linha in mapa]
+    linha, coluna = objetivo
+    mapa_copia[linha][coluna] = "v"
+    return mapa_copia
+
 
 # Funcao que valida se o mapa, a base e a vitima estao dentro das regras do problema.
 def validar_mapa(mapa, inicio, objetivo):
@@ -110,7 +121,6 @@ def obter_sucessores(mapa, estado):
 
         if dentro_mapa:
             terreno = mapa[nova_linha][nova_coluna]
-
             if terreno != "X":
                 sucessores.append((nova_linha, nova_coluna))
 
@@ -120,7 +130,8 @@ def obter_sucessores(mapa, estado):
 # Funcao que devolve o custo de entrar na celula atual do mapa.
 def calcular_custo(mapa, estado):
     linha, coluna = estado
-    return CUSTOS[mapa[linha][coluna]]
+    terreno = mapa[linha][coluna]
+    return CUSTOS.get(terreno, CUSTOS["A"])
 
 
 # Funcao que estima a distancia restante usando a regra de Manhattan multiplicada pelo menor custo.
@@ -373,10 +384,7 @@ def imprimir_mapa(mapa, inicio, objetivo, caminho=None):
             elif estado in conjunto_caminho:
                 simbolo = "*"
             else:
-                simbolo = mapa[linha][coluna]
-
-            if estado == objetivo:
-                simbolo = "V"
+                simbolo = mapa[linha][coluna].upper() if mapa[linha][coluna] == "v" else mapa[linha][coluna]
 
             elementos.append(simbolo)
 
@@ -401,7 +409,7 @@ def imprimir_resultado(nome, resultado):
 
 # Funcao que executa todos os algoritmos sobre a mesma instancia e organiza os resultados.
 def executar_instancia(nome, instancia):
-    mapa = instancia["mapa"]
+    mapa = marcar_vitima_no_mapa(instancia["mapa"], instancia["objetivo"])
     inicio = instancia["inicio"]
     objetivo = instancia["objetivo"]
 
